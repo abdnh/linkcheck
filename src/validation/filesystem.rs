@@ -153,31 +153,22 @@ fn normalize_id(content: &str) -> String {
         .collect::<String>()
 }
 
-// Taken from https://github.com/rust-lang/mdBook/blob/master/src/utils/mod.rs#L47
-fn id_from_content(content: &str) -> String {
+// Taken from https://github.com/rust-lang/mdBook/blob/8cdb8d03672f3b5a4a7c6ecf3942fd74c029562b/src/utils/mod.rs#L51
+pub fn id_from_content(content: &str) -> String {
     let mut content = content.to_string();
 
     // Skip any tags or html-encoded stuff
-    const REPL_SUB: &[&str] = &[
-        "<em>",
-        "</em>",
-        "<code>",
-        "</code>",
-        "<strong>",
-        "</strong>",
-        "&lt;",
-        "&gt;",
-        "&amp;",
-        "&#39;",
-        "&quot;",
-    ];
+    lazy_static! {
+        static ref HTML: Regex = Regex::new(r"(<.*?>)").unwrap();
+    }
+    content = HTML.replace_all(&content, "").into();
+    const REPL_SUB: &[&str] = &["&lt;", "&gt;", "&amp;", "&#39;", "&quot;"];
     for sub in REPL_SUB {
         content = content.replace(sub, "");
     }
 
     // Remove spaces and hashes indicating a header
     let trimmed = content.trim().trim_start_matches('#').trim();
-
     normalize_id(trimmed)
 }
 
