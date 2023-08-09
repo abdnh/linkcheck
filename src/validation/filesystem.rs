@@ -127,7 +127,7 @@ fn check_fragment_in_md_source(
     fragment: &str,
 ) -> Result<(), Reason> {
     lazy_static! {
-        static ref HEADING: Regex = Regex::new(r#"(?m)^#+\s+([^{}]+)\s*(\{\s*(#|(id=))([^}]+)\s*\})?"#).unwrap();
+        static ref HEADING: Regex = Regex::new(r#"(?m)^#+\s+([^{}\n]+)\s*(\{\s*(#|(id=))([^}]+)\s*\})?"#).unwrap();
     }
     for heading in HEADING.captures_iter(&source) {
         let id;
