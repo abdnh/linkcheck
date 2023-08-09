@@ -22,29 +22,34 @@ pub fn markdown(src: &str) -> impl Iterator<Item = (String, Span)> + '_ {
 
 /// The callback passed to `pulldown-cmark` whenever a broken link is
 /// encountered.
-pub type BrokenLinkCallback<'src> = dyn FnMut(BrokenLink<'_>) -> std::option::Option<(CowStr<'src>, CowStr<'src>)>
-    + 'src;
+pub type BrokenLinkCallback<'input, 'borrow> = Option<
+    &'borrow mut dyn FnMut(
+        BrokenLink<'input>,
+    ) -> Option<(CowStr<'input>, CowStr<'input>)>,
+>;
 
 /// A scanner that uses [`pulldown_cmark`] to extract all links from markdown,
 /// using the supplied callback to try and fix broken links.
-pub fn markdown_with_broken_link_callback<'a>(
-    src: &'a str,
-    on_broken_link: Option<&'a mut BrokenLinkCallback<'a>>,
-) -> impl Iterator<Item = (String, Span)> + 'a {
-    Parser::new_with_broken_link_callback(
-        src,
-        Options::ENABLE_FOOTNOTES,
-        on_broken_link,
-    )
-    .into_offset_iter()
-    .filter_map(|(event, range)| match event {
-        Event::Start(Tag::Link(_, dest, _))
-        | Event::Start(Tag::Image(_, dest, _)) => Some((
-            dest.to_string(),
-            Span::new(range.start as u32, range.end as u32),
-        )),
-        _ => None,
-    })
+pub fn markdown_with_broken_link_callback<'input, 'callback>(
+    src: &'input str,
+    on_broken_link: BrokenLinkCallback<'input, 'callback>,
+) -> impl Iterator<Item = (String, Span)> + 'input
+where
+    'callback: 'input,
+{
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_FOOTNOTES);
+    options.insert(Options::ENABLE_HEADING_ATTRIBUTES);
+    Parser::new_with_broken_link_callback(src, options, on_broken_link)
+        .into_offset_iter()
+        .filter_map(|(event, range)| match event {
+            Event::Start(Tag::Link(_, dest, _))
+            | Event::Start(Tag::Image(_, dest, _)) => Some((
+                dest.to_string(),
+                Span::new(range.start as u32, range.end as u32),
+            )),
+            _ => None,
+        })
 }
 
 #[cfg(test)]
