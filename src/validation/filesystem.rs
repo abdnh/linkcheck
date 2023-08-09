@@ -127,10 +127,16 @@ fn check_fragment_in_md_source(
     fragment: &str,
 ) -> Result<(), Reason> {
     lazy_static! {
-        static ref HEADING: Regex = Regex::new("(?m)^#+ (.+)").unwrap();
+        static ref HEADING: Regex = Regex::new(r#"(?m)^#+\s+([^{}]+)\s*(\{\s*(#|(id=))([^}]+)\s*\})?"#).unwrap();
     }
     for heading in HEADING.captures_iter(&source) {
-        if &id_from_content(&heading[1]) == fragment {
+        let id;
+        if let Some(custom_id) = heading.get(5) {
+            id = custom_id.as_str().to_string();
+        } else {
+            id = id_from_content(&heading[1]);
+        }
+        if &id == fragment {
             return Ok(());
         }
     }
